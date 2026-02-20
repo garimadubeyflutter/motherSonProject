@@ -11,5 +11,10 @@ class StepService {
   }
 
   Stream<int> get stepStream =>
-      Pedometer.stepCountStream.map((event) => event.steps);
+      Pedometer.stepCountStream.map((event) => event.steps).distinct();
+
+  Future<int> getLatestStepCount() async {
+    final event = await Pedometer.stepCountStream.first;
+    return event.steps;
+  }
 }
