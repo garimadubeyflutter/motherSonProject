@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -24,19 +25,33 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime selectedDate = DateTime.now();
   int batteryLevel = 0;
   final Battery _battery = Battery();
-  late StreamSubscription<int> _stepSubscription;
+  StreamSubscription<int>? _stepSubscription;
   final StepService _stepService = StepService();
+  int? _initialSensorSteps;
 
   @override
   void initState() {
     super.initState();
     _loadBattery();
-    _stepSubscription =
-        _stepService.stepStream.listen((steps) {
-          context
-              .read<ActivityBloc>()
-              .add(StepsUpdated(steps));
-        });
+    _startStepTracking();
+  }
+
+  Future<void> _startStepTracking() async {
+    final hasPermission = await _stepService.requestActivityPermission();
+    if (!hasPermission || !mounted) return;
+
+    _stepSubscription = _stepService.stepStream.listen((sensorSteps) {
+      _initialSensorSteps ??= sensorSteps;
+      final currentSessionSteps = max(0, sensorSteps - _initialSensorSteps!);
+      final distanceKm =
+          double.parse((currentSessionSteps * StepService.kmPerStep).toStringAsFixed(2));
+      final calories = (currentSessionSteps * StepService.caloriesPerStep).round();
+
+      final activityBloc = context.read<ActivityBloc>();
+      activityBloc.add(StepsUpdated(currentSessionSteps));
+      activityBloc.add(UpdateDistance(distanceKm));
+      activityBloc.add(UpdateCalories(calories));
+    });
   }
 
   Future<void> _loadBattery() async {
@@ -53,6 +68,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void dispose() {
+    _stepSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final calculator = CalculateScore();
 
@@ -63,17 +84,14 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, state) {
             final score = calculator(state.activity);
             final category = calculator.category(score);
-            final recommendation =
-            calculator.recommendation(category);
+            final recommendation = calculator.recommendation(category);
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-
                   Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         "retimer Ring",
@@ -87,37 +105,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         backgroundColor: Colors.green,
                         child: Text(
                           "$batteryLevel%",
-                          style: const TextStyle(
-                              color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                         ),
                       )
                     ],
                   ),
-
                   const SizedBox(height: 20),
 
                   /// Date Selector
                   Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
                         onPressed: () => _changeDate(-1),
-                        icon: const Icon(Icons.arrow_left,
-                            color: Colors.white),
+                        icon: const Icon(Icons.arrow_left, color: Colors.white),
                       ),
                       Text(
-                        DateFormat(
-                            "EEE, dd MMM yyyy")
-                            .format(selectedDate),
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16),
+                        DateFormat("EEE, dd MMM yyyy").format(selectedDate),
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       IconButton(
                         onPressed: () => _changeDate(1),
-                        icon: const Icon(Icons.arrow_right,
-                            color: Colors.white),
+                        icon: const Icon(Icons.arrow_right, color: Colors.white),
                       ),
                     ],
                   ),
