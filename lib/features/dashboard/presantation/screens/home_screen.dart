@@ -27,7 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final Battery _battery = Battery();
   StreamSubscription<int>? _stepSubscription;
   final StepService _stepService = StepService();
-  int? _initialSensorSteps;
   bool _refreshingSteps = false;
 
   @override
@@ -41,6 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasPermission = await _stepService.requestActivityPermission();
     if (!hasPermission || !mounted) return;
 
+    await _refreshStepData();
+
     _stepSubscription = _stepService.stepStream.listen(
       _applySensorSteps,
       onError: (_) {},
@@ -48,8 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _applySensorSteps(int sensorSteps) {
-    _initialSensorSteps ??= sensorSteps;
-    final currentSessionSteps = max(0, sensorSteps - _initialSensorSteps!);
+    final currentSessionSteps = max(0, sensorSteps);
     final distanceKm =
         double.parse((currentSessionSteps * StepService.kmPerStep).toStringAsFixed(2));
     final calories = (currentSessionSteps * StepService.caloriesPerStep).round();
