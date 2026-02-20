@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # mothersontasks
 
 A new Flutter project.
@@ -14,3 +15,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+=======
+# motherSonProject
+A tasks related project check daily acctivity
+>>>>>>> f424bae1ef6e426aa4a0639b652ab7e3de149a3d

@@ -16,7 +16,7 @@ class CalculateScore {
     if (score <= 70) return "Moderate";
     return "High";
   }
-//mlk;k
+
   String recommendation(String category) {
     switch (category) {
       case "Low":
