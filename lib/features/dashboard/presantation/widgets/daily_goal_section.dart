@@ -13,11 +13,11 @@ class DailyGoalSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double stepPercent = (activity.steps / stepTarget).clamp(0, 1);
-    double caloriePercent =
-    (activity.calories / calorieTarget).clamp(0, 1);
-    double distancePercent =
-    (activity.distance / distanceTarget).clamp(0, 1);
+    final double stepPercent = (activity.steps / stepTarget).clamp(0, 1);
+    final double caloriePercent =
+        (activity.calories / calorieTarget).clamp(0, 1);
+    final double distancePercent =
+        (activity.distance / distanceTarget).clamp(0, 1);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,6 +37,7 @@ class DailyGoalSection extends StatelessWidget {
               percent: stepPercent,
               icon: Icons.directions_walk,
               value: "${activity.steps}",
+              target: "$stepTarget",
               label: "Steps",
               color: Colors.cyanAccent,
             ),
@@ -44,13 +45,15 @@ class DailyGoalSection extends StatelessWidget {
               percent: caloriePercent,
               icon: Icons.local_fire_department,
               value: "${activity.calories} kcal",
+              target: "$calorieTarget kcal",
               label: "Calories",
               color: Colors.orangeAccent,
             ),
             _buildRing(
               percent: distancePercent,
               icon: Icons.location_on,
-              value: "${activity.distance} km",
+              value: "${activity.distance.toStringAsFixed(2)} km",
+              target: "${distanceTarget.toStringAsFixed(1)} km",
               label: "Distance",
               color: Colors.tealAccent,
             ),
@@ -64,6 +67,7 @@ class DailyGoalSection extends StatelessWidget {
     required double percent,
     required IconData icon,
     required String value,
+    required String target,
     required String label,
     required Color color,
   }) {
@@ -121,7 +125,26 @@ class DailyGoalSection extends StatelessWidget {
           label,
           style: const TextStyle(
               color: Colors.white60, fontSize: 14),
-        )
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 110,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: percent,
+              backgroundColor: Colors.white12,
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          "$value / $target",
+          style: const TextStyle(color: Colors.white54, fontSize: 11),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
