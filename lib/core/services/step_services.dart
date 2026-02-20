@@ -1,5 +1,6 @@
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 
 class StepService {
   static const double kmPerStep = 0.0008;
@@ -10,11 +11,17 @@ class StepService {
     return status.isGranted;
   }
 
-  Stream<int> get stepStream =>
-      Pedometer.stepCountStream.map((event) => event.steps).distinct();
+  Stream<int> get stepStream => Pedometer.stepCountStream
+      .map((event) => event.steps)
+      .handleError((_) {})
+      .distinct();
 
   Future<int> getLatestStepCount() async {
-    final event = await Pedometer.stepCountStream.first;
-    return event.steps;
+    try {
+      final event = await Pedometer.stepCountStream.first;
+      return event.steps;
+    } on PlatformException {
+      return 0;
+    }
   }
 }
