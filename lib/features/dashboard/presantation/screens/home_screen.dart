@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription<int>? _stepSubscription;
   final StepService _stepService = StepService();
   int? _initialSensorSteps;
+  bool _refreshingSteps = false;
 
   @override
   void initState() {
@@ -40,18 +41,42 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasPermission = await _stepService.requestActivityPermission();
     if (!hasPermission || !mounted) return;
 
-    _stepSubscription = _stepService.stepStream.listen((sensorSteps) {
-      _initialSensorSteps ??= sensorSteps;
-      final currentSessionSteps = max(0, sensorSteps - _initialSensorSteps!);
-      final distanceKm =
-          double.parse((currentSessionSteps * StepService.kmPerStep).toStringAsFixed(2));
-      final calories = (currentSessionSteps * StepService.caloriesPerStep).round();
+    _stepSubscription = _stepService.stepStream.listen(
+      _applySensorSteps,
+      onError: (_) {},
+    );
+  }
 
-      final activityBloc = context.read<ActivityBloc>();
-      activityBloc.add(StepsUpdated(currentSessionSteps));
-      activityBloc.add(UpdateDistance(distanceKm));
-      activityBloc.add(UpdateCalories(calories));
+  void _applySensorSteps(int sensorSteps) {
+    _initialSensorSteps ??= sensorSteps;
+    final currentSessionSteps = max(0, sensorSteps - _initialSensorSteps!);
+    final distanceKm =
+        double.parse((currentSessionSteps * StepService.kmPerStep).toStringAsFixed(2));
+    final calories = (currentSessionSteps * StepService.caloriesPerStep).round();
+
+    final activityBloc = context.read<ActivityBloc>();
+    activityBloc.add(StepsUpdated(currentSessionSteps));
+    activityBloc.add(UpdateDistance(distanceKm));
+    activityBloc.add(UpdateCalories(calories));
+  }
+
+  Future<void> _refreshStepData() async {
+    if (_refreshingSteps) return;
+    setState(() {
+      _refreshingSteps = true;
     });
+
+    try {
+      final sensorSteps = await _stepService.getLatestStepCount();
+      if (!mounted) return;
+      _applySensorSteps(sensorSteps);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _refreshingSteps = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadBattery() async {
@@ -107,10 +132,27 @@ class _HomeScreenState extends State<HomeScreen> {
                           "$batteryLevel%",
                           style: const TextStyle(color: Colors.black),
                         ),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
+
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: _refreshingSteps ? null : _refreshStepData,
+                      icon: _refreshingSteps
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh),
+                      label: const Text("Refresh Steps"),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
 
                   /// Date Selector
                   Row(
